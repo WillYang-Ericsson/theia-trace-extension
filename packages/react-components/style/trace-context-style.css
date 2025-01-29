@@ -41,3 +41,18 @@
     position: sticky;
     bottom: 0;
 }
+
+.__react_component_tooltip {
+    padding: 10 !important;
+    text-align: left !important;
+    max-height: 250px !important;
+    max-width: 400px !important;
+    white-space: nowrap !important;
+    overflow: auto !important;
+    color: white !important;
+    border: 1px solid transparent !important;
+    background-color: rgba(51, 122, 183, 0.9) !important;
+    border-radius: 3 !important;
+    transition: opacity 0.3s !important;
+    z-index: 999 !important;
+}

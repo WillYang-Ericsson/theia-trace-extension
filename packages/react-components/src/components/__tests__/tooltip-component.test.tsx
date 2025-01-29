@@ -1,90 +1,91 @@
+import { render, screen } from '@testing-library/react';
 import * as React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { TooltipComponent } from '../tooltip-component';
 
-const model = {
-    id: '123',
-    range: { start: 1, end: 10 },
-    label: 'model'
-};
-const tooltip = new TooltipComponent(10);
-tooltip.setState = jest.fn();
-
-describe('Tooltip component', () => {
-    let axisComponent: any;
-    const ref = (el: TooltipComponent | undefined | null): void => {
-        axisComponent = el;
+// Mock ReactTooltip since we don't need its actual implementation for these tests
+jest.mock('react-tooltip', () => {
+    return function MockReactTooltip(props: any) {
+        return (
+            <div
+                data-testid="mock-tooltip"
+                id={props.id}
+                className="__react_component_tooltip"
+                data-type={props.type}
+                data-effect={props.effect}
+                data-place={props.place}
+                data-clickable={props.clickable}
+                data-scroll-hide={props.scrollHide}
+            >
+                {props.children}
+            </div>
+        );
     };
+});
 
-    beforeEach(() => {
-        axisComponent = null;
+describe('TooltipComponent', () => {
+    it('renders itself', () => {
+        const { container } = render(<TooltipComponent visible={true} />);
+        expect(screen.getByTestId('mock-tooltip')).toBeTruthy();
     });
 
-    afterEach(() => {
-        cleanup();
-        jest.clearAllMocks();
+    it('renders an hourglass when visible with no content', () => {
+        const { container } = render(<TooltipComponent visible={true} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
+        expect(tooltip.textContent).toBe('⏳');
     });
 
-    /*
-     * Skip due to issues with TooltipComponent:
-     *
-     * react-tooltip v4.2.14 works in the application but causes an exception
-     * in tests (https://github.com/ReactTooltip/react-tooltip/issues/681),
-     * which is fixed in v4.2.17. However, version v4.2.17 breaks the tooltip
-     * when running in the application.
-     */
-    it.skip('renders itself', () => {
-        render(<TooltipComponent />);
-        expect(axisComponent).toBeTruthy();
-        expect(axisComponent instanceof TooltipComponent).toBe(true);
+    it('renders the provided content if visible with content', () => {
+        const testContent = <div>Test Content</div>;
+        const { container } = render(<TooltipComponent visible={true} content={testContent} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
+        expect(tooltip.textContent).toBe('Test Content');
     });
 
-    // Skip due to issues with TooltipComponent (see above for details)
-    it.skip('resets timer on mouse enter', () => {
-        tooltip.state = {
-            element: model,
-            func: undefined,
-            content: 'Test'
-        };
-        render(<TooltipComponent />);
-        const component = screen.getByRole('tooltip-component-role');
-        fireEvent.mouseEnter(component);
-        fireEvent.mouseLeave(component);
-
-        expect(tooltip.setState).toBeCalledWith({ content: undefined });
+    it('does not render when not visible', () => {
+        const { container } = render(<TooltipComponent visible={false} content="Test Content" />);
+        const tooltip = screen.queryByTestId('mock-tooltip');
+        expect(tooltip).toBeNull();
     });
 
-    it('displays a tooltip for a time graph state component', () => {
-        tooltip.state = {
-            element: undefined,
-            func: undefined,
-            content: undefined
-        };
-        tooltip.setElement(model);
-
-        expect(tooltip.setState).toBeCalledWith({ element: model, func: undefined });
+    it('has the correct tooltip ID', () => {
+        const { container } = render(<TooltipComponent visible={true} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
+        expect(tooltip.id).toBe('tooltip-component');
     });
 
-    it('hides tooltip if mouse is not hovering over element', async () => {
-        tooltip.state = {
-            element: model,
-            func: undefined,
-            content: 'Test'
-        };
-        tooltip.setElement(undefined);
-        await new Promise(r => setTimeout(r, 500));
+    it('applies correct tooltip configuration', () => {
+        const { container } = render(<TooltipComponent visible={true} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
 
-        expect(tooltip.setState).toBeCalledWith({ content: undefined });
+        expect(tooltip.getAttribute('data-type')).toBe('info');
+        expect(tooltip.getAttribute('data-effect')).toBe('float');
+        expect(tooltip.getAttribute('data-place')).toBe('bottom');
+        expect(tooltip.getAttribute('data-clickable')).toBe('true');
+        expect(tooltip.getAttribute('data-scroll-hide')).toBe('true');
     });
 
-    it('hide tooltip because there is no content', () => {
-        tooltip.state = {
-            element: model,
-            func: undefined,
-            content: undefined
-        };
-        tooltip.setElement(undefined);
+    it('renders complex React nodes as content', () => {
+        const complexContent = (
+            <div>
+                <h1>Title</h1>
+                <p>Description</p>
+                <span>Details</span>
+            </div>
+        );
+        const { container } = render(<TooltipComponent visible={true} content={complexContent} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
+        expect(tooltip.textContent).toBe('TitleDescriptionDetails');
+    });
 
-        expect(tooltip.setState).toBeCalledWith({ content: undefined });
+    it('renders null content as hourglass', () => {
+        const { container } = render(<TooltipComponent visible={true} content={null} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
+        expect(tooltip.textContent).toBe('⏳');
+    });
+
+    it('renders undefined content as hourglass', () => {
+        const { container } = render(<TooltipComponent visible={true} content={undefined} />);
+        const tooltip = screen.getByTestId('mock-tooltip');
+        expect(tooltip.textContent).toBe('⏳');
     });
 });
